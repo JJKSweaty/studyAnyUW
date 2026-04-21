@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
+import { FocusedDrillButton } from "@/components/focused-drill-button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { getWorkspaceDetail } from "@/lib/server/repository";
@@ -22,10 +23,26 @@ export default async function MistakesPage({
         {workspace.mistakes.length > 0 ? (
           workspace.mistakes.map((mistake) => (
             <Card key={mistake.id}>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge>{mistake.topicTitle}</Badge>
-                <Badge className="border-zinc-700 bg-zinc-950 text-zinc-400">{mistake.type}</Badge>
-                <Badge className="border-zinc-700 bg-zinc-950 text-zinc-400">{mistake.difficulty}</Badge>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge>{mistake.topicTitle}</Badge>
+                  <Badge className="border-zinc-700 bg-zinc-950 text-zinc-400">{mistake.type}</Badge>
+                  <Badge className="border-zinc-700 bg-zinc-950 text-zinc-400">{mistake.difficulty}</Badge>
+                </div>
+                <FocusedDrillButton
+                  workspaceId={workspaceId}
+                  topicTitle={mistake.topicTitle}
+                  struggleNote={[
+                    `Missed question: ${mistake.questionText}`,
+                    mistake.answerText ? `Student answer: ${mistake.answerText}` : "",
+                    typeof mistake.gradingFeedback.conciseFeedback === "string"
+                      ? `Feedback: ${mistake.gradingFeedback.conciseFeedback}`
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join("\n")}
+                  compact
+                />
               </div>
               <h3 className="mt-4 text-xl font-semibold text-zinc-50">{mistake.questionText}</h3>
               <p className="mt-3 text-sm text-zinc-400">

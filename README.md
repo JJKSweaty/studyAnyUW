@@ -119,6 +119,7 @@ ollama serve
 Then in the app:
 
 - Provider type: `ollama`
+
 - Base URL: `http://127.0.0.1:11434/v1`
 - Model name: your local chat or vision model
 

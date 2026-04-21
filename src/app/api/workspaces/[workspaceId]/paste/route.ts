@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { extractPastedDocument } from "@/lib/server/ingest/extract";
-import { insertChunks, insertDocument, replaceWorkspaceContent } from "@/lib/server/repository";
+import { getWorkspaceDetail, insertChunks, insertDocument, replaceWorkspaceContent } from "@/lib/server/repository";
 import { analyzeWorkspaceText, buildChunkIndex, embedChunks } from "@/lib/server/study-pipeline";
 
 export const runtime = "nodejs";
@@ -16,6 +16,11 @@ export async function POST(
 
   if (!body.text?.trim()) {
     return NextResponse.json({ error: "Pasted text is required." }, { status: 400 });
+  }
+
+  const workspace = getWorkspaceDetail(workspaceId);
+  if (!workspace) {
+    return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
   }
 
   const extracted = extractPastedDocument(body.title?.trim() || "Pasted notes", body.text);
@@ -45,7 +50,11 @@ export async function POST(
   );
 
   const pack = await analyzeWorkspaceText({
-    workspaceName: extracted.title,
+    workspaceName: workspace.name,
+    workspaceDescription: workspace.description,
+    courseName: workspace.courseName,
+    courseCode: workspace.courseCode,
+    tags: workspace.tags,
     text: extracted.text,
   });
 

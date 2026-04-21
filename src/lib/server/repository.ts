@@ -1028,6 +1028,95 @@ export function replaceWorkspaceContent(
   transaction();
 }
 
+export function appendQuestionsToWorkspace(
+  workspaceId: string,
+  questions: QuestionInput[],
+) {
+  const db = getDb();
+  const timestamp = nowIso();
+
+  const existingQuestionTexts = new Set(
+    db
+      .prepare(
+        `
+        SELECT LOWER(question_text) AS question_text
+        FROM questions
+        WHERE workspace_id = ?
+      `,
+      )
+      .all(workspaceId)
+      .map((row) => (row as { question_text: string }).question_text),
+  );
+
+  const topicRows = db
+    .prepare(
+      `
+      SELECT id, title
+      FROM topics
+      WHERE workspace_id = ?
+    `,
+    )
+    .all(workspaceId) as Array<{ id: string; title: string }>;
+
+  const topicIdsByTitle = new Map(topicRows.map((topic) => [topic.title.toLowerCase(), topic.id]));
+
+  const questionInsert = db.prepare(
+    `
+    INSERT INTO questions (
+      id, workspace_id, topic_id, type, topic_title, subtopic, difficulty, question_text,
+      options_json, correct_answer, grading_rubric_json, explanation, source_refs_json,
+      confidence_score, estimated_time_seconds, locked, feedback_summary_json, created_at, updated_at
+    ) VALUES (
+      @id, @workspaceId, @topicId, @type, @topicTitle, @subtopic, @difficulty, @questionText,
+      @options, @correctAnswer, @gradingRubric, @explanation, @sourceRefs,
+      @confidenceScore, @estimatedTimeSeconds, 0, '{}', @createdAt, @updatedAt
+    )
+  `,
+  );
+
+  const transaction = db.transaction(() => {
+    let insertedCount = 0;
+
+    questions.forEach((question) => {
+      const normalized = question.questionText.trim().toLowerCase();
+      if (!normalized || existingQuestionTexts.has(normalized)) {
+        return;
+      }
+
+      questionInsert.run({
+        id: question.id ?? id("question"),
+        workspaceId,
+        topicId: topicIdsByTitle.get(question.topic.toLowerCase()) ?? null,
+        type: question.type,
+        topicTitle: question.topic,
+        subtopic: question.subtopic,
+        difficulty: question.difficulty,
+        questionText: question.questionText,
+        options: JSON.stringify(question.options),
+        correctAnswer: question.correctAnswer,
+        gradingRubric: JSON.stringify(question.gradingRubric),
+        explanation: question.explanation,
+        sourceRefs: JSON.stringify(question.sourceRefs),
+        confidenceScore: question.confidenceScore,
+        estimatedTimeSeconds: question.estimatedTimeSeconds,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+
+      existingQuestionTexts.add(normalized);
+      insertedCount += 1;
+    });
+
+    if (insertedCount > 0) {
+      db.prepare(`UPDATE workspaces SET updated_at = ? WHERE id = ?`).run(timestamp, workspaceId);
+    }
+
+    return insertedCount;
+  });
+
+  return transaction();
+}
+
 export function createStudySession(input: {
   workspaceId: string;
   mode: string;

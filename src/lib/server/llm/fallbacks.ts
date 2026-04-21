@@ -2,12 +2,17 @@ import { gradingSchema, type TopicPack } from "@/lib/schemas";
 import { estimateReadingSeconds, uniqueBy } from "@/lib/utils";
 
 import type { ParsedContent } from "../ingest/parse";
+import { inferStudyContext } from "../study-context";
 
 export function fallbackTopicPack(input: {
   workspaceName: string;
   parsed: ParsedContent;
   text: string;
 }): TopicPack {
+  const studyContext = inferStudyContext({
+    workspaceName: input.workspaceName,
+    text: input.text,
+  });
   const headings =
     input.parsed.headings.length > 0 ? input.parsed.headings : [`${input.workspaceName} overview`];
   const topics = headings.slice(0, 6).map((heading, index) => ({
@@ -66,14 +71,20 @@ export function fallbackTopicPack(input: {
         subtopic: "",
         difficulty: (index % 3 === 0 ? "hard" : "medium") as "medium" | "hard",
         questionText:
-          index % 2 === 0
-            ? `Compare ${topic.title} to a nearby alternative. What tradeoff decides which one you should use?`
-            : `Teach back the core idea behind ${topic.title} in your own words.`,
+          studyContext.isCodingCourse
+            ? index % 2 === 0
+              ? `Apply ${topic.title} to a small coding task. What tradeoff, edge case, or debugging step would matter most?`
+              : `Teach back ${topic.title} as if you were explaining how to implement or use it in code.`
+            : index % 2 === 0
+              ? `Compare ${topic.title} to a nearby alternative. What tradeoff decides which one you should use?`
+              : `Teach back the core idea behind ${topic.title} in your own words.`,
         options: [],
         correctAnswer: topic.summary,
         gradingRubric: [
           "Explains the core concept accurately.",
-          "Includes the relevant tradeoff or failure mode.",
+          studyContext.isCodingCourse
+            ? "Includes the relevant tradeoff, failure mode, or implementation concern."
+            : "Includes the relevant tradeoff or failure mode.",
           "Uses concrete reasoning instead of vague memorization.",
         ],
         explanation: `This question checks whether ${topic.title} is actually understood.`,

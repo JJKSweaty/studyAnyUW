@@ -71,6 +71,11 @@ export const topicPackSchema = z.object({
   questions: z.array(questionSchema).min(1),
 });
 
+export const focusedQuestionSetSchema = z.object({
+  overview: z.string().min(12),
+  questions: z.array(questionSchema).min(4).max(8),
+});
+
 export const gradingSchema = z.object({
   score: z.number().min(0).max(1),
   correctness: z.number().min(0).max(1),
@@ -108,6 +113,7 @@ export const generationJobSchema = z.object({
 });
 
 export type TopicPack = z.infer<typeof topicPackSchema>;
+export type FocusedQuestionSet = z.infer<typeof focusedQuestionSetSchema>;
 export type QuestionInput = z.infer<typeof questionSchema>;
 export type FlashcardInput = z.infer<typeof flashcardSchema>;
 export type TopicInput = z.infer<typeof topicSchema>;

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
+import { FocusedDrillButton } from "@/components/focused-drill-button";
 import { PasteImportForm } from "@/components/paste-import-form";
 import { StartSessionGrid } from "@/components/start-session-grid";
 import { UploadMaterialForm } from "@/components/upload-material-form";
@@ -114,7 +115,17 @@ export default async function WorkspacePage({
 
         <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
           <UploadMaterialForm workspaceId={workspaceId} workspaceName={workspace.name} />
-          <PasteImportForm workspaceId={workspaceId} />
+          <PasteImportForm
+            workspaceId={workspaceId}
+            workspaceName={workspace.name}
+            workspaceDescription={workspace.description}
+            courseName={workspace.courseName}
+            courseCode={workspace.courseCode}
+            conciseSummary={workspace.conciseSummary}
+            tags={workspace.tags}
+            documents={workspace.documents}
+            courseContextDocuments={workspace.courseContextDocuments}
+          />
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -134,6 +145,9 @@ export default async function WorkspacePage({
                       <p className="mt-2 text-sm text-zinc-300">{topic.summary}</p>
                     </div>
                     <Badge>{Math.round(topic.mastery * 100)}%</Badge>
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <FocusedDrillButton workspaceId={workspaceId} topicTitle={topic.title} compact />
                   </div>
                   <div className="mt-4">
                     <Progress value={topic.mastery * 100} />

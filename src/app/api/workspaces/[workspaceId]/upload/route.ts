@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { extractUploadedDocument } from "@/lib/server/ingest/extract";
 import { sanitizeFileName } from "@/lib/server/storage";
 import { getUploadsDir } from "@/lib/server/storage";
-import { insertChunks, insertDocument, touchWorkspace } from "@/lib/server/repository";
+import { getWorkspaceDetail, insertChunks, insertDocument, touchWorkspace } from "@/lib/server/repository";
 import { analyzeWorkspaceText, buildChunkIndex, describeImageContext, embedChunks } from "@/lib/server/study-pipeline";
 import { replaceWorkspaceContent } from "@/lib/server/repository";
 
@@ -24,6 +24,11 @@ export async function POST(
 
   if (files.length === 0) {
     return NextResponse.json({ error: "At least one file is required." }, { status: 400 });
+  }
+
+  const workspace = getWorkspaceDetail(workspaceId);
+  if (!workspace) {
+    return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
   }
 
   let combinedText = "";
@@ -73,7 +78,11 @@ export async function POST(
   }
 
   const pack = await analyzeWorkspaceText({
-    workspaceName: "Uploaded workspace",
+    workspaceName: workspace.name,
+    workspaceDescription: workspace.description,
+    courseName: workspace.courseName,
+    courseCode: workspace.courseCode,
+    tags: workspace.tags,
     text: combinedText,
   });
 
