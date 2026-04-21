@@ -75,4 +75,30 @@ describe("fallbackTopicPack", () => {
     expect(pack.topics.some((topic) => topic.title === "Sorting Algorithms")).toBe(true);
     expect(pack.topics.some((topic) => /Course Snapshot/i.test(topic.title))).toBe(false);
   });
+
+  it("uses pasted question topic metadata instead of turning Topic/Difficulty labels into topics", () => {
+    const text = `
+      Topic Map
+      Graphs and Search
+      Why it matters: Graph search is the basis for reachability and shortest-path reasoning.
+      Key ideas: BFS uses a queue and DFS uses recursion or a stack.
+
+      Practice Questions
+      Q: What data structure provides the engine for BFS?
+      A: A standard queue.
+      Topic: Graph Search
+      Difficulty: Easy
+    `;
+
+    const pack = fallbackTopicPack({
+      workspaceName: "Graph Review",
+      parsed: parseStudyText(text),
+      text,
+    });
+
+    expect(pack.topics.some((topic) => topic.title === "Graph Search")).toBe(true);
+    expect(pack.topics.some((topic) => /^Topic$/i.test(topic.title))).toBe(false);
+    expect(pack.topics.some((topic) => /^Difficulty$/i.test(topic.title))).toBe(false);
+    expect(pack.questions.some((question) => question.topic === "Graph Search")).toBe(true);
+  });
 });

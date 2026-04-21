@@ -33,5 +33,20 @@ describe("parseStudyText", () => {
     expect(parsed.structuredTopics.some((topic) => topic.title === "Hash Tables & Maps")).toBe(true);
     expect(parsed.structuredTopics.some((topic) => topic.title === "Sorting Algorithms")).toBe(true);
     expect(parsed.qaPairs[0]?.question).toContain("Why can quick sort degrade badly?");
+    expect(parsed.questionBlocks[0]?.topicHint).toBe("");
+  });
+
+  it("captures topic and difficulty metadata attached to pasted questions", () => {
+    const parsed = parseStudyText(`
+      Practice Questions
+      Q: What data structure powers BFS?
+      A: A queue.
+      Topic: Graph Search
+      Difficulty: Easy
+    `);
+
+    expect(parsed.questionBlocks[0]?.question).toContain("What data structure powers BFS?");
+    expect(parsed.questionBlocks[0]?.topicHint).toBe("Graph Search");
+    expect(parsed.questionBlocks[0]?.difficultyHint).toBe("easy");
   });
 });

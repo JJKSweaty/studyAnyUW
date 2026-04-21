@@ -22,6 +22,17 @@ const genericHeadingBlocklist = new Set([
   "important",
 ]);
 
+const genericFieldBlocklist = new Set([
+  "topic",
+  "difficulty",
+  "why it matters",
+  "key ideas",
+  "common mistakes",
+  "intuition / mental model",
+  "what this material is mainly about",
+  "what the student must really understand, not just memorize",
+]);
+
 export function fallbackTopicPack(input: {
   workspaceName: string;
   parsed: ParsedContent;
@@ -120,6 +131,7 @@ function buildFallbackTopics(input: {
       ...input.parsed.structuredTopics.map((topic) => topic.title),
       ...input.parsed.headings,
       ...input.parsed.definitions.map((definition) => definition.split(":")[0]?.trim() ?? ""),
+      ...input.parsed.questionBlocks.map((item) => item.topicHint),
       ...input.parsed.qaPairs.map((item) => deriveTopicTitle(item.question)),
       ...input.parsed.questionCandidates.map(deriveTopicTitle),
       ...input.parsed.bulletGroups.slice(0, 12).map(deriveTopicTitle),
@@ -129,7 +141,11 @@ function buildFallbackTopics(input: {
       .filter(Boolean),
     (item) => item.toLowerCase(),
   )
-    .filter((item) => !genericHeadingBlocklist.has(item.toLowerCase()))
+    .filter(
+      (item) =>
+        !genericHeadingBlocklist.has(item.toLowerCase()) &&
+        !genericFieldBlocklist.has(item.toLowerCase()),
+    )
     .slice(0, 6);
 
   const titles = topicCandidates.length > 0 ? topicCandidates : [normalizeTopicTitle(input.workspaceName) || "Core concepts"];
@@ -202,11 +218,11 @@ function buildFallbackQuestions(input: {
   const implementationLabel = preferredLanguage ? `${preferredLanguage} code` : "code or pseudocode";
 
   const directQuestions: QuestionInput[] = [
-    ...input.parsed.qaPairs.map((pair, index) =>
+    ...input.parsed.questionBlocks.map((pair, index) =>
       makeQuestion({
         type: index % 2 === 0 ? "short_answer" : "explain",
-        topic: findBestTopic(pair.question, input.topics),
-        difficulty: index % 3 === 0 ? "hard" : "medium",
+        topic: resolveQuestionTopic(pair.question, pair.topicHint, input.topics),
+        difficulty: normalizeDifficulty(pair.difficultyHint) ?? (index % 3 === 0 ? "hard" : "medium"),
         questionText: pair.question,
         correctAnswer: pair.answer,
         explanation: "Pulled directly from the pasted source and kept as a grounded study check.",
@@ -215,7 +231,7 @@ function buildFallbackQuestions(input: {
     ...input.parsed.questionCandidates.map((questionText, index) =>
       makeQuestion({
         type: index % 2 === 0 ? "short_answer" : "explain",
-        topic: findBestTopic(questionText, input.topics),
+        topic: resolveQuestionTopic(questionText, "", input.topics),
         difficulty: index % 3 === 0 ? "hard" : "medium",
         questionText,
         correctAnswer:
@@ -350,16 +366,43 @@ function findBestTopic(questionText: string, topics: TopicInput[]) {
   return topics.find((topic) => matchesTopic(questionText, topic.title))?.title ?? topics[0]?.title ?? "Core concepts";
 }
 
+function resolveQuestionTopic(questionText: string, topicHint: string, topics: TopicInput[]) {
+  const normalizedHint = normalizeTopicTitle(topicHint);
+  if (normalizedHint) {
+    const exact = topics.find((topic) => topic.title.toLowerCase() === normalizedHint.toLowerCase());
+    if (exact) {
+      return exact.title;
+    }
+
+    const fuzzy = topics.find(
+      (topic) => matchesTopic(topic.title, normalizedHint) || matchesTopic(normalizedHint, topic.title),
+    );
+    if (fuzzy) {
+      return fuzzy.title;
+    }
+
+    return normalizedHint;
+  }
+
+  return findBestTopic(questionText, topics);
+}
+
 function normalizeTopicTitle(value: string) {
   const cleaned = value
     .replace(/^#+\s*/, "")
     .replace(/^(q:|question[:\s]+)/i, "")
+    .replace(/^(topic|difficulty|why it matters|key ideas|common mistakes|intuition \/ mental model)[:\s]+/i, "")
+    .replace(/^(what this material is mainly about|what the student must really understand, not just memorize)[:\s]+/i, "")
     .replace(/^(explain|compare|why|how|what|when|which|describe)\s+/i, "")
     .replace(/\?+$/, "")
     .replace(/\s+/g, " ")
     .trim();
 
   if (cleaned.length < 3 || cleaned.length > 80) {
+    return "";
+  }
+
+  if (genericHeadingBlocklist.has(cleaned.toLowerCase()) || genericFieldBlocklist.has(cleaned.toLowerCase())) {
     return "";
   }
 
@@ -386,7 +429,16 @@ function extractParagraphSeeds(text: string) {
     .map((paragraph) => paragraph.split(/[.?!]/)[0] ?? "")
     .map((line) => line.replace(/^#+\s*/, "").trim())
     .map((line) => line.split(/\s+/).slice(0, 6).join(" "))
-    .filter((line) => line.length >= 8);
+    .filter((line) => line.length >= 8)
+    .filter(
+      (line) =>
+        !/^(course snapshot|topic map|definitions|practice questions|weak spot drills|fast review checklist)/i.test(
+          line,
+        ) &&
+        !/^(what this material is mainly about|what the student must really understand, not just memorize)/i.test(
+          line,
+        ),
+    );
 }
 
 function matchesTopic(value: string, title: string) {
@@ -419,4 +471,12 @@ function summarizeSourceText(text: string) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 320);
+}
+
+function normalizeDifficulty(value: string) {
+  if (value === "easy" || value === "medium" || value === "hard") {
+    return value;
+  }
+
+  return null;
 }

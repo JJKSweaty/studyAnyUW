@@ -173,12 +173,27 @@ export function createOpenAICompatibleProvider(
     async healthCheck(profile) {
       try {
         const models = await this.listModels(profile);
+        const hasSelectedModel = models.some((model) => model.id === profile.modelName);
+
+        if (models.length === 0) {
+          return {
+            ok: false,
+            message: "Connected, but no models were returned.",
+          };
+        }
+
+        if (!hasSelectedModel) {
+          return {
+            ok: false,
+            message: `Connected, but the configured model "${profile.modelName}" is not installed. Available model(s): ${models
+              .map((model) => model.id)
+              .join(", ")}.`,
+          };
+        }
+
         return {
           ok: true,
-          message:
-            models.length > 0
-              ? `Connected. ${models.length} model(s) available.`
-              : "Connected, but no models were returned.",
+          message: `Connected. ${models.length} model(s) available. Using "${profile.modelName}".`,
         };
       } catch (error) {
         return {
@@ -255,25 +270,28 @@ export function createOpenAICompatibleProvider(
       return null;
     },
     async gradeAnswer(profile, prompt, validate) {
-      const result = await this.generateStructuredJSON(profile, {
-        prompt,
-        schemaName: "grading_result",
-        validator: (payload) => validate(payload),
-        fallback: () =>
-          validate({
-            ...gradingSchema.parse({
-              score: 0,
-              correctness: 0,
-              completeness: 0,
-              clarity: 0,
-              verdict: "incorrect",
-              conciseFeedback: "Grading failed. Check the provider configuration.",
-              improvedAnswer: "No model answer available.",
-            }),
-          }),
-      });
+      try {
+        return await this.generateStructuredJSON(profile, {
+          prompt,
+          schemaName: "grading_result",
+          validator: (payload) => validate(payload),
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Grading failed. Check the provider configuration.";
 
-      return result;
+        return validate({
+          ...gradingSchema.parse({
+            score: 0,
+            correctness: 0,
+            completeness: 0,
+            clarity: 0,
+            verdict: "incorrect",
+            conciseFeedback: message,
+            improvedAnswer: "No model answer available because grading could not run.",
+          }),
+        });
+      }
     },
     async generateImageDescription(profile, input) {
       const description = await generateImageDescriptionWithChat(profile, input);

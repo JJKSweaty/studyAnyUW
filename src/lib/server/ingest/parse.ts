@@ -10,6 +10,8 @@ const sectionLabels = [
 ];
 
 const fieldLabels = [
+  "What this material is mainly about:",
+  "What the student must really understand, not just memorize:",
   "Why it matters:",
   "Key ideas:",
   "Intuition / mental model:",
@@ -32,6 +34,13 @@ export type ParsedStructuredTopic = {
   commonMistakes: string[];
 };
 
+export type ParsedQuestionBlock = {
+  question: string;
+  answer: string;
+  topicHint: string;
+  difficultyHint: string;
+};
+
 export type ParsedContent = {
   normalizedText: string;
   headings: string[];
@@ -39,6 +48,7 @@ export type ParsedContent = {
   bulletGroups: string[];
   questionCandidates: string[];
   qaPairs: Array<{ question: string; answer: string }>;
+  questionBlocks: ParsedQuestionBlock[];
   structuredTopics: ParsedStructuredTopic[];
 };
 
@@ -61,6 +71,7 @@ export function normalizeStudyText(text: string) {
   });
 
   normalized = normalized
+    .replace(/\s*\[\s?\]\s*/g, "\n[ ] ")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n[ \t]+/g, "\n")
@@ -83,6 +94,12 @@ export function parseStudyText(text: string): ParsedContent {
   const definitions = uniqueBy(
     lines
       .filter((line) => /^[A-Za-z][A-Za-z0-9 ()/-]{2,40}:\s+.{8,}/.test(line))
+      .filter(
+        (line) =>
+          !/^(why it matters|key ideas|intuition \/ mental model|common mistakes|topic|difficulty|what this material is mainly about|what the student must really understand, not just memorize)[:\s]/i.test(
+            line,
+          ),
+      )
       .map((line) => line.trim()),
     (item) => item.toLowerCase(),
   ).slice(0, 24);
@@ -105,17 +122,11 @@ export function parseStudyText(text: string): ParsedContent {
     (item) => item.toLowerCase(),
   ).slice(0, 40);
 
-  const qaPairs: Array<{ question: string; answer: string }> = [];
-  for (let index = 0; index < lines.length - 1; index += 1) {
-    const current = lines[index];
-    const next = lines[index + 1];
-    if (/^(q:|question[:\s])/i.test(current) && /^(a:|answer[:\s])/i.test(next)) {
-      qaPairs.push({
-        question: current.replace(/^(q:|question[:\s]+)/i, "").trim(),
-        answer: next.replace(/^(a:|answer[:\s]+)/i, "").trim(),
-      });
-    }
-  }
+  const questionBlocks = extractQuestionBlocks(lines);
+  const qaPairs = questionBlocks.map((block) => ({
+    question: block.question,
+    answer: block.answer,
+  }));
 
   return {
     normalizedText,
@@ -124,6 +135,7 @@ export function parseStudyText(text: string): ParsedContent {
     bulletGroups,
     questionCandidates,
     qaPairs,
+    questionBlocks,
     structuredTopics: extractStructuredTopics(lines),
   };
 }
@@ -217,6 +229,48 @@ function extractStructuredTopics(lines: string[]) {
   }
 
   return uniqueBy(topics, (topic) => topic.title.toLowerCase()).slice(0, 8);
+}
+
+function extractQuestionBlocks(lines: string[]) {
+  const blocks: ParsedQuestionBlock[] = [];
+
+  for (let index = 0; index < lines.length - 1; index += 1) {
+    const current = lines[index];
+    const next = lines[index + 1];
+
+    if (!/^(q:|question[:\s])/i.test(current) || !/^(a:|answer[:\s])/i.test(next)) {
+      continue;
+    }
+
+    const block: ParsedQuestionBlock = {
+      question: current.replace(/^(q:|question[:\s]+)/i, "").trim(),
+      answer: next.replace(/^(a:|answer[:\s]+)/i, "").trim(),
+      topicHint: "",
+      difficultyHint: "",
+    };
+
+    let cursor = index + 2;
+    while (cursor < lines.length) {
+      const line = lines[cursor];
+
+      if (/^(q:|question[:\s]|course snapshot|topic map|definitions|practice questions|weak spot drills|fast review checklist)$/i.test(line)) {
+        break;
+      }
+
+      if (/^topic:/i.test(line)) {
+        block.topicHint = line.replace(/^topic:\s*/i, "").trim();
+      } else if (/^difficulty:/i.test(line)) {
+        block.difficultyHint = line.replace(/^difficulty:\s*/i, "").trim().toLowerCase();
+      }
+
+      cursor += 1;
+    }
+
+    blocks.push(block);
+    index = Math.max(index, cursor - 1);
+  }
+
+  return uniqueBy(blocks, (block) => `${block.question.toLowerCase()}::${block.answer.toLowerCase()}`).slice(0, 40);
 }
 
 function escapeRegExp(value: string) {
