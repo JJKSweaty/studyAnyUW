@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "workspace": {
+    "name": "DSA Theory Starter",
+    "description": "Importable sample workspace for local testing.",
+    "courseName": "ECE 250 Theory",
+    "courseCode": "ECE250",
+    "tags": ["sample", "theory", "dsa"],
+    "conciseSummary": "Starter workspace for practicing local import and quiz flows.",
+    "detailedSummary": "This sample package mirrors the shape used by the app's workspace export manifest."
+  },
+  "topics": [
+    {
+      "title": "Balanced BST search",
+      "summary": "Searching a balanced BST is logarithmic because each step discards half the remaining candidates.",
+      "detailedSummary": "A balanced BST preserves height near log n, so search cost tracks tree height.",
+      "keyPoints": [
+        "Height determines search complexity.",
+        "Balancing prevents linked-list-like degeneration."
+      ],
+      "commonMistakes": [
+        "Claiming O(log n) for every BST regardless of shape."
+      ],
+      "formulas": [
+        "height ~= log2(n)"
+      ],
+      "sourceRefs": []
+    }
+  ],
+  "questions": [
+    {
+      "type": "short_answer",
+      "topic": "Balanced BST search",
+      "subtopic": "",
+      "difficulty": "medium",
+      "questionText": "What is the time complexity of searching in a balanced BST and why?",
+      "options": [],
+      "correctAnswer": "O(log n), because the balanced height is logarithmic and each comparison moves one level down the tree.",
+      "gradingRubric": [
+        "States O(log n).",
+        "Connects the answer to tree height.",
+        "Mentions balance as the reason."
+      ],
+      "explanation": "This checks whether the student understands the relationship between balance and height.",
+      "sourceRefs": [],
+      "confidenceScore": 0.8,
+      "estimatedTimeSeconds": 75
+    }
+  ],
+  "documents": [
+    {
+      "title": "Imported sample text",
+      "sourceType": "import",
+      "kind": "txt",
+      "mimeType": "text/plain",
+      "originalName": "sample.txt",
+      "extractedText": "Balanced BSTs maintain logarithmic height, which keeps search efficient."
+    }
+  ]
+}
