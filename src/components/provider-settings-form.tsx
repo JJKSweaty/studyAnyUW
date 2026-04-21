@@ -95,7 +95,7 @@ export function ProviderSettingsForm({
       const response = await fetch("/api/provider/health", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profileId: form.id }),
+        body: JSON.stringify({ profileId: form.id, profile: form }),
       });
       return (await response.json()) as { ok: boolean; message: string };
     },
@@ -110,9 +110,12 @@ export function ProviderSettingsForm({
       const response = await fetch("/api/provider/models", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profileId: form.id }),
+        body: JSON.stringify({ profileId: form.id, profile: form }),
       });
-      return (await response.json()) as { models?: Array<{ id: string }>; error?: string };
+      return (await response.json()) as {
+        models?: Array<{ id: string }>;
+        error?: string;
+      };
     },
     onSuccess: (data) => {
       if (data.error) {
@@ -244,6 +247,14 @@ export function ProviderSettingsForm({
               </button>
             ))}
           </div>
+        </div>
+        <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 text-sm text-zinc-300">
+          <p className="font-medium text-zinc-100">If connection fails</p>
+          <p className="mt-2">
+            The app expects a local model server on `http://127.0.0.1:11434/v1` for Ollama or
+            `http://127.0.0.1:1234/v1` for LM Studio. If neither server is running, both
+            connection test and model fetch will fail.
+          </p>
         </div>
       </Card>
 

@@ -4,6 +4,7 @@ import { ArrowRight, Brain, FolderOpenDot, Sparkles, TriangleAlert } from "lucid
 import { AppShell } from "@/components/app-shell";
 import { CreateCourseWorkspace } from "@/components/create-course-workspace";
 import { ImportWorkspaceForm } from "@/components/import-workspace-form";
+import { OllamaSetupModal } from "@/components/ollama-setup-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -67,9 +68,12 @@ export default function DashboardPage() {
                     The app still stores everything locally, but topic extraction, question generation,
                     semantic search, and grading are stronger once a local model server is running.
                   </p>
-                  <Link href="/settings" className="mt-4 inline-flex items-center gap-2 text-sm text-amber-200">
-                    Open settings <ArrowRight className="h-4 w-4" />
-                  </Link>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <Link href="/settings" className="inline-flex items-center gap-2 text-sm text-amber-200">
+                      Open settings <ArrowRight className="h-4 w-4" />
+                    </Link>
+                    <OllamaSetupModal triggerLabel="Set up Ollama" />
+                  </div>
                 </div>
               </div>
             </Card>
