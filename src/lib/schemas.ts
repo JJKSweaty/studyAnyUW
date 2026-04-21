@@ -68,7 +68,7 @@ export const topicPackSchema = z.object({
   likelyExamQuestions: z.array(z.string()).default([]),
   topics: z.array(topicSchema).min(1),
   flashcards: z.array(flashcardSchema).default([]),
-  questions: z.array(questionSchema).min(1),
+  questions: z.array(questionSchema).min(10).max(20),
 });
 
 export const focusedQuestionSetSchema = z.object({

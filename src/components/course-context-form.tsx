@@ -32,8 +32,7 @@ export function CourseContextForm({
       });
 
       if (!response.ok) {
-        const error = (await response.json()) as { error?: string };
-        throw new Error(error.error ?? "Could not attach course context.");
+        throw new Error(await readErrorMessage(response, "Could not attach course context."));
       }
     },
     onSuccess: () => {
@@ -57,7 +56,7 @@ export function CourseContextForm({
       <input
         type="file"
         multiple
-        accept=".pdf,.doc,.docx,.txt,.md,.markdown,.png,.jpg,.jpeg,.webp,.gif"
+        accept=".pdf,.docx,.txt,.md,.markdown,.png,.jpg,.jpeg,.webp,.gif"
         onChange={(event) => setFiles(event.target.files)}
         className="block w-full rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 px-4 py-8 text-sm text-zinc-300 file:mr-4 file:rounded-xl file:border-0 file:bg-zinc-800 file:px-3 file:py-2 file:text-zinc-100"
       />
@@ -77,4 +76,19 @@ export function CourseContextForm({
       </div>
     </Card>
   );
+}
+
+async function readErrorMessage(response: Response, fallback: string) {
+  const raw = await response.text();
+
+  if (!raw.trim()) {
+    return fallback;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as { error?: string };
+    return parsed.error ?? fallback;
+  } catch {
+    return raw;
+  }
 }

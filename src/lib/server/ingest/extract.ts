@@ -14,11 +14,10 @@ function detectKind(fileName: string, mimeType: string) {
   const lower = fileName.toLowerCase();
   if (mimeType.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp)$/i.test(lower)) return "image";
   if (mimeType.includes("pdf") || lower.endsWith(".pdf")) return "pdf";
-  if (
-    mimeType.includes("word") ||
-    lower.endsWith(".docx") ||
-    lower.endsWith(".doc")
-  )
+  if (lower.endsWith(".doc")) {
+    throw new Error("Legacy .doc files are not supported. Convert the file to .docx, .pdf, .txt, or .md and try again.");
+  }
+  if (mimeType.includes("word") || lower.endsWith(".docx"))
     return "docx";
   if (lower.endsWith(".md") || mimeType.includes("markdown")) return "markdown";
   return "txt";
