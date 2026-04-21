@@ -7,14 +7,30 @@ import { toast } from "sonner";
 
 import type { ProviderProfileInput } from "@/lib/schemas";
 
+import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 
-function numeric(value: string, fallback: number) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
+const providerDefaults: Record<
+  ProviderProfileInput["providerType"],
+  { baseUrl: string; label: string }
+> = {
+  ollama: {
+    baseUrl: "http://127.0.0.1:11434/v1",
+    label: "Best default for quick local server setup.",
+  },
+  lmstudio: {
+    baseUrl: "http://127.0.0.1:1234/v1",
+    label: "Best default if you prefer a local desktop model manager.",
+  },
+};
+
+const recommendationNotes = [
+  "RTX 3080 10GB: start with qwen3:8b for text and qwen3-vl:8b for image context.",
+  "RTX 3080 12GB: qwen3:14b is usually the best text-model ceiling before performance starts dropping.",
+  "gpt-oss:20b is attractive, but its 14GB Ollama package usually exceeds a 10GB or 12GB 3080 cleanly.",
+];
 
 export function ProviderSettingsForm({
   profiles,
@@ -22,13 +38,16 @@ export function ProviderSettingsForm({
   profiles: Array<ProviderProfileInput & { id?: string }>;
 }) {
   const router = useRouter();
-  const activeProfile = useMemo(() => profiles.find((profile) => profile.isActive) ?? profiles[0], [profiles]);
+  const activeProfile = useMemo(
+    () => profiles.find((profile) => profile.isActive) ?? profiles[0],
+    [profiles],
+  );
   const [form, setForm] = useState<ProviderProfileInput>(
     activeProfile ?? {
       name: "Ollama Local",
       providerType: "ollama",
-      baseUrl: "http://127.0.0.1:11434/v1",
-      modelName: "gpt-oss:20b",
+      baseUrl: providerDefaults.ollama.baseUrl,
+      modelName: "qwen3:14b",
       embeddingModel: "",
       temperature: 0.2,
       maxOutputTokens: 1400,
@@ -40,6 +59,15 @@ export function ProviderSettingsForm({
   );
   const [healthMessage, setHealthMessage] = useState("");
   const [models, setModels] = useState<string[]>([]);
+
+  const updateProviderType = (providerType: ProviderProfileInput["providerType"]) => {
+    setForm((current) => ({
+      ...current,
+      providerType,
+      name: providerType === "ollama" ? "Ollama Local" : "LM Studio Local",
+      baseUrl: providerDefaults[providerType].baseUrl,
+    }));
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -53,7 +81,7 @@ export function ProviderSettingsForm({
       }
       return (await response.json()) as { profileId: string };
     },
-    onSuccess: async () => {
+    onSuccess: () => {
       toast.success("Provider profile saved.");
       router.refresh();
     },
@@ -119,73 +147,49 @@ export function ProviderSettingsForm({
         <div className="mb-4">
           <h3 className="text-lg font-semibold">Local model profile</h3>
           <p className="mt-1 text-sm text-zinc-400">
-            The app is provider-agnostic. Point it at whichever local server is running on this machine.
+            Keep the choice simple: pick the local server, pick the model, then choose how strict grading should be.
           </p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          <Input
-            value={form.name}
-            onChange={(event) => setForm({ ...form, name: event.target.value })}
-            placeholder="Profile name"
-          />
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 px-4 py-3 text-sm text-zinc-300">
+            Profile
+            <div className="mt-1 text-zinc-100">{form.name}</div>
+          </div>
           <select
             value={form.providerType}
             onChange={(event) =>
-              setForm({
-                ...form,
-                providerType: event.target.value as ProviderProfileInput["providerType"],
-              })
+              updateProviderType(event.target.value as ProviderProfileInput["providerType"])
             }
             className="h-11 rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100"
           >
             <option value="ollama">Ollama</option>
             <option value="lmstudio">LM Studio</option>
           </select>
-          <Input
-            className="md:col-span-2"
-            value={form.baseUrl}
-            onChange={(event) => setForm({ ...form, baseUrl: event.target.value })}
-            placeholder="Base URL"
-          />
-          <Input
-            value={form.modelName}
-            onChange={(event) => setForm({ ...form, modelName: event.target.value })}
-            placeholder="Chat model"
-          />
-          <Input
-            value={form.embeddingModel}
-            onChange={(event) => setForm({ ...form, embeddingModel: event.target.value })}
-            placeholder="Embedding model"
-          />
-          <Input
-            type="number"
-            step="0.1"
-            value={form.temperature}
-            onChange={(event) => setForm({ ...form, temperature: numeric(event.target.value, 0.2) })}
-            placeholder="Temperature"
-          />
-          <Input
-            type="number"
-            value={form.maxOutputTokens}
-            onChange={(event) =>
-              setForm({ ...form, maxOutputTokens: numeric(event.target.value, 1400) })
-            }
-            placeholder="Max output tokens"
-          />
-          <Input
-            type="number"
-            value={form.chunkSize}
-            onChange={(event) => setForm({ ...form, chunkSize: numeric(event.target.value, 900) })}
-            placeholder="Chunk size"
-          />
-          <Input
-            type="number"
-            value={form.retrievalCount}
-            onChange={(event) =>
-              setForm({ ...form, retrievalCount: numeric(event.target.value, 5) })
-            }
-            placeholder="Retrieval count"
-          />
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 px-4 py-3 text-sm text-zinc-300 md:col-span-2">
+            {providerDefaults[form.providerType].label}
+            <div className="mt-1 text-xs text-zinc-500">{form.baseUrl}</div>
+          </div>
+          {models.length > 0 ? (
+            <select
+              value={form.modelName}
+              onChange={(event) => setForm({ ...form, modelName: event.target.value })}
+              className="h-11 rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100 md:col-span-2"
+            >
+              <option value="">Select a model</option>
+              {models.map((model) => (
+                <option key={model} value={model}>
+                  {model}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <Input
+              className="md:col-span-2"
+              value={form.modelName}
+              onChange={(event) => setForm({ ...form, modelName: event.target.value })}
+              placeholder="Model name"
+            />
+          )}
           <select
             value={form.gradingStrictness}
             onChange={(event) =>
@@ -205,31 +209,42 @@ export function ProviderSettingsForm({
           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
             {saveMutation.isPending ? "Saving..." : "Save profile"}
           </Button>
-          <Button variant="secondary" onClick={() => healthMutation.mutate()} disabled={healthMutation.isPending}>
+          <Button
+            variant="secondary"
+            onClick={() => healthMutation.mutate()}
+            disabled={healthMutation.isPending}
+          >
             Test connection
           </Button>
-          <Button variant="outline" onClick={() => modelMutation.mutate()} disabled={modelMutation.isPending}>
+          <Button
+            variant="outline"
+            onClick={() => modelMutation.mutate()}
+            disabled={modelMutation.isPending}
+          >
             Fetch models
           </Button>
         </div>
         {healthMessage ? <p className="mt-3 text-sm text-zinc-400">{healthMessage}</p> : null}
-        {models.length > 0 ? (
-          <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
-            <p className="mb-2 text-sm font-medium text-zinc-200">Available models</p>
-            <div className="flex flex-wrap gap-2">
-              {models.map((model) => (
-                <button
-                  key={model}
-                  type="button"
-                  className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-300"
-                  onClick={() => setForm({ ...form, modelName: model })}
-                >
-                  {model}
-                </button>
-              ))}
-            </div>
+        <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
+          <p className="mb-3 text-sm font-medium text-zinc-200">RTX 3080 guidance</p>
+          <div className="space-y-2 text-sm text-zinc-300">
+            {recommendationNotes.map((note) => (
+              <p key={note}>{note}</p>
+            ))}
           </div>
-        ) : null}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {["qwen3:8b", "qwen3:14b", "qwen3-vl:8b", "gpt-oss:20b"].map((model) => (
+              <button
+                key={model}
+                type="button"
+                className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-300"
+                onClick={() => setForm({ ...form, modelName: model })}
+              >
+                {model}
+              </button>
+            ))}
+          </div>
+        </div>
       </Card>
 
       <Card>
@@ -249,6 +264,9 @@ export function ProviderSettingsForm({
                     {profile.providerType} • {profile.baseUrl}
                   </p>
                   <p className="mt-2 text-sm text-zinc-300">{profile.modelName}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Badge>{profile.gradingStrictness}</Badge>
+                  </div>
                 </div>
                 <Button
                   variant={profile.isActive ? "primary" : "outline"}

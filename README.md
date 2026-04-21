@@ -1,14 +1,15 @@
 # StudyAny Local
 
-Local-first study web app for private course workspaces, uploaded files, pasted notes, adaptive quiz sessions, and local model providers such as Ollama or LM Studio.
+Local-first study web app for private course workspaces, uploaded files, pasted notes, course-level context libraries, adaptive quiz sessions, and local model providers such as Ollama or LM Studio.
 
 ## What It Does
 
 - Runs as a local Next.js app with App Router and TypeScript
-- Stores metadata, sessions, settings, and analytics in local SQLite
-- Stores uploaded files and exports on the local filesystem
-- Supports local model provider profiles for Ollama and LM Studio
-- Ingests `PDF`, `DOCX`, `TXT`, `Markdown`, and pasted text
+- Stores metadata, sessions, settings, analytics, and shared course context in local SQLite
+- Stores uploaded files, images, and exports on the local filesystem
+- Supports simplified local model selection for Ollama and LM Studio
+- Ingests `PDF`, `DOCX`, `TXT`, `Markdown`, images, and pasted text
+- Supports shared course-level context so reusable files and screenshots do not have to be re-uploaded per workspace
 - Builds topic summaries, flashcards, and question banks from source material
 - Starts quiz sessions with grading, mistake tracking, and review queue updates
 - Exports a workspace as a portable zip package and imports prior packages
@@ -34,43 +35,51 @@ Supported provider profiles:
 
 The app owns session history, question state, mistake tracking, and retrieval state. It does not depend on provider-side memory.
 
+Recommended starting models for an RTX 3080:
+
+- `qwen3:8b` for the safest fast text setup
+- `qwen3:14b` if your card/setup handles it well and you want a stronger text model
+- `qwen3-vl:8b` if you want image context support
+- `gpt-oss:20b` only if you accept higher memory pressure and slower inference
+
 ## Folder Structure
 
 ```text
 .
-├─ examples/
-│  └─ sample-workspace.manifest.json
-├─ local-data/
-│  ├─ exports/
-│  ├─ seed/
-│  ├─ uploads/
-│  └─ study-any.sqlite
-├─ src/
-│  ├─ app/
-│  │  ├─ api/
-│  │  ├─ courses/
-│  │  ├─ paste/
-│  │  ├─ settings/
-│  │  ├─ upload/
-│  │  └─ workspace/[workspaceId]/
-│  ├─ components/
-│  └─ lib/
-│     ├─ server/
-│     │  ├─ ingest/
-│     │  ├─ llm/
-│     │  ├─ providers/
-│     │  ├─ bootstrap.ts
-│     │  ├─ db.ts
-│     │  ├─ repository.ts
-│     │  ├─ seed.ts
-│     │  ├─ session-builder.ts
-│     │  ├─ storage.ts
-│     │  ├─ study-pipeline.ts
-│     │  └─ workspace-package.ts
-│     ├─ schemas.ts
-│     └─ utils.ts
-├─ .env.example
-└─ vitest.config.ts
+|-- examples/
+|   `-- sample-workspace.manifest.json
+|-- local-data/
+|   |-- course-context/
+|   |-- exports/
+|   |-- seed/
+|   |-- uploads/
+|   `-- study-any.sqlite
+|-- src/
+|   |-- app/
+|   |   |-- api/
+|   |   |-- courses/
+|   |   |-- paste/
+|   |   |-- settings/
+|   |   |-- upload/
+|   |   `-- workspace/[workspaceId]/
+|   |-- components/
+|   `-- lib/
+|       |-- server/
+|       |   |-- ingest/
+|       |   |-- llm/
+|       |   |-- providers/
+|       |   |-- bootstrap.ts
+|       |   |-- db.ts
+|       |   |-- repository.ts
+|       |   |-- seed.ts
+|       |   |-- session-builder.ts
+|       |   |-- storage.ts
+|       |   |-- study-pipeline.ts
+|       |   `-- workspace-package.ts
+|       |-- schemas.ts
+|       `-- utils.ts
+|-- .env.example
+`-- vitest.config.ts
 ```
 
 ## Setup
@@ -111,8 +120,7 @@ Then in the app:
 
 - Provider type: `ollama`
 - Base URL: `http://127.0.0.1:11434/v1`
-- Model name: your local chat model
-- Embedding model: optional if your Ollama setup exposes embeddings
+- Model name: your local chat or vision model
 
 ### LM Studio
 
@@ -126,20 +134,23 @@ Use the Settings page to test the connection and fetch available models.
 
 ## Core Workflow
 
-1. Create a course and workspace from the dashboard
-2. Upload files or paste notes into the workspace
-3. The app extracts text, chunks it, stores it locally, and builds topics/questions
-4. Start a quiz session from the workspace page
-5. Submit answers and receive local grading
-6. Review mistakes later in Mistake Review
-7. Export the workspace as a zip for another machine
+1. Create a course and workspace from the dashboard or a course page
+2. Attach reusable files or screenshots to the course if they should help multiple workspaces
+3. Upload files or paste notes into a workspace
+4. The app extracts text, creates image summaries where possible, chunks content, stores it locally, and builds topics/questions
+5. Start a quiz session from the workspace page
+6. Submit answers and receive local grading
+7. Review mistakes later in Mistake Review
+8. Export the workspace as a zip for another machine
 
 ## Completed MVP Features
 
 - Dashboard with local workspace overview
-- Course and workspace creation
-- Provider settings with saved profiles, health check, and model list fetch
-- File upload flow
+- More intuitive course and workspace creation
+- Course and workspace archive/delete actions
+- Course detail page with shared course context library
+- Provider settings with simplified model selection, grading strictness, health check, and model list fetch
+- File and image upload flow
 - Paste import flow
 - Heuristic parsing plus local-model-backed topic/question generation
 - Question bank generation with structured validation and fallback logic
@@ -154,8 +165,9 @@ Use the Settings page to test the connection and fetch available models.
 ## Implementation Notes
 
 - The app stores all important data locally under `local-data/`.
-- SQLite stores metadata, sessions, responses, review queue, analytics, and provider profiles.
+- SQLite stores metadata, sessions, responses, review queue, analytics, provider profiles, and course context assets.
 - Documents are chunked locally and can optionally store embeddings when a provider embedding model is configured.
+- Images are handled efficiently by storing the original file locally and indexing only a compact textual summary or note.
 - If structured JSON generation fails, the app falls back to deterministic local heuristics instead of crashing.
 - Retrieval currently uses lexical fallback first and optional embedding similarity when embeddings are available.
 
@@ -175,6 +187,7 @@ npm run seed
 - Embedding-based retrieval depends on the configured local provider exposing an embeddings endpoint.
 - Reranking is not implemented yet.
 - Export currently packages manifest data and extracted document text; it does not reconstruct original binary uploads.
+- Image understanding quality depends on whether the selected local model actually supports vision.
 - The UI is built for a single local user and does not include auth or multi-profile separation.
 
 ## Next Steps

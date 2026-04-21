@@ -75,7 +75,13 @@ export default function DashboardPage() {
             </Card>
           ) : null}
 
-          <CreateCourseWorkspace />
+          <CreateCourseWorkspace
+            courses={courses.map((course) => ({
+              id: course.id,
+              name: course.name,
+              code: course.code,
+            }))}
+          />
 
           <Card>
             <div className="mb-4 flex items-center justify-between">
@@ -98,7 +104,7 @@ export default function DashboardPage() {
                         <div>
                           <p className="text-lg font-semibold text-zinc-100">{workspace.name}</p>
                           <p className="mt-1 text-sm text-zinc-400">
-                            {workspace.courseName} • {workspace.questionCount} questions • {workspace.documentCount} sources
+                            {workspace.courseName} • {workspace.questionCount} questions • {workspace.documentCount} workspace sources
                           </p>
                         </div>
                         <Badge>{Math.round(workspace.accuracy * 100)}% accuracy</Badge>
@@ -155,7 +161,7 @@ export default function DashboardPage() {
                     <FolderOpenDot className="h-5 w-5 text-lime-300" />
                     <div>
                       <p className="font-medium text-zinc-100">Workflow A</p>
-                      <p className="text-sm text-zinc-400">Upload PDFs, DOCX, Markdown, or text files.</p>
+                      <p className="text-sm text-zinc-400">Upload PDFs, DOCX, Markdown, text files, or image context.</p>
                     </div>
                   </div>
                 </div>

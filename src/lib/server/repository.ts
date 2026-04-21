@@ -126,12 +126,7 @@ export function listCourses(): CourseSummary[] {
         COUNT(DISTINCT w.id) AS workspace_count,
         COUNT(DISTINCT q.id) AS question_count,
         COUNT(DISTINCT ccd.id) AS context_document_count,
-        SUM(
-          CASE
-            WHEN topic_stats.mastery < 0.65 THEN 1
-            ELSE 0
-          END
-        ) AS weak_topic_count
+        COUNT(DISTINCT CASE WHEN topic_stats.mastery < 0.65 THEN topic_stats.id END) AS weak_topic_count
       FROM courses c
       LEFT JOIN workspaces w ON w.course_id = c.id
       LEFT JOIN course_context_documents ccd ON ccd.course_id = c.id
@@ -186,7 +181,7 @@ export function listWorkspaces(): WorkspaceSummary[] {
         COUNT(DISTINCT d.id) AS document_count,
         COUNT(DISTINCT t.id) AS topic_count,
         COUNT(DISTINCT q.id) AS question_count,
-        SUM(CASE WHEN review.status = 'due' THEN 1 ELSE 0 END) AS due_review_count,
+        COUNT(DISTINCT CASE WHEN review.status = 'due' THEN review.id END) AS due_review_count,
         AVG(COALESCE(r.score, 0)) AS accuracy
       FROM workspaces w
       INNER JOIN courses c ON c.id = w.course_id

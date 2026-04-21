@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
+import { CourseActions } from "@/components/course-actions";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { listCourses, listWorkspaces } from "@/lib/server/repository";
@@ -18,7 +19,11 @@ export default function CoursesPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-semibold text-zinc-50">{course.name}</h3>
+                  <Link href={`/courses/${course.id}`}>
+                    <h3 className="text-xl font-semibold text-zinc-50 transition hover:text-amber-200">
+                      {course.name}
+                    </h3>
+                  </Link>
                   <Badge>{course.code}</Badge>
                 </div>
                 <p className="mt-2 text-sm text-zinc-400">{course.description || "No description provided."}</p>
@@ -26,7 +31,11 @@ export default function CoursesPage() {
               <div className="text-right text-sm text-zinc-500">
                 <p>{course.workspaceCount} workspace(s)</p>
                 <p>{course.questionCount} questions</p>
+                <p>{course.contextDocumentCount} shared context file(s)</p>
                 <p>Updated {humanAgo(course.updatedAt)}</p>
+                <div className="mt-3 flex justify-end">
+                  <CourseActions courseId={course.id} archived={course.archived} />
+                </div>
               </div>
             </div>
             <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">

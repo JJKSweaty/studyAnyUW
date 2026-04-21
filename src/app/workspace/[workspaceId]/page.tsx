@@ -5,6 +5,7 @@ import { AppShell } from "@/components/app-shell";
 import { PasteImportForm } from "@/components/paste-import-form";
 import { StartSessionGrid } from "@/components/start-session-grid";
 import { UploadMaterialForm } from "@/components/upload-material-form";
+import { WorkspaceActions } from "@/components/workspace-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -30,6 +31,9 @@ export default async function WorkspacePage({
       eyebrow={`${workspace.courseCode} • ${workspace.courseName}`}
       actions={
         <>
+          <Link href={`/courses/${workspace.courseId}`}>
+            <Button variant="outline">Course hub</Button>
+          </Link>
           <Link href={`/workspace/${workspaceId}/mistakes`}>
             <Button variant="secondary">Review mistakes</Button>
           </Link>
@@ -39,6 +43,7 @@ export default async function WorkspacePage({
           <a href={`/api/workspaces/${workspaceId}/export`}>
             <Button>Export workspace</Button>
           </a>
+          <WorkspaceActions workspaceId={workspaceId} archived={workspace.status === "archived"} />
         </>
       }
     >
@@ -59,6 +64,10 @@ export default async function WorkspacePage({
           <Card>
             <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Mistakes queued</p>
             <p className="mt-4 text-3xl font-semibold text-zinc-50">{workspace.mistakes.length}</p>
+          </Card>
+          <Card>
+            <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Course context</p>
+            <p className="mt-4 text-3xl font-semibold text-zinc-50">{workspace.courseContextDocuments.length}</p>
           </Card>
         </div>
 
@@ -189,6 +198,37 @@ export default async function WorkspacePage({
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {workspace.documents.map((document) => (
+              <div key={document.id} className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-4">
+                <p className="font-semibold text-zinc-100">{document.title}</p>
+                <p className="mt-1 text-sm text-zinc-500">
+                  {document.sourceType} • {document.kind} • {humanAgo(document.createdAt)}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {Object.entries(document.stats).map(([key, value]) => (
+                    <Badge key={key} className="border-zinc-700 bg-zinc-950 text-zinc-400">
+                      {key}: {String(value)}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-zinc-100">Shared course context</h3>
+              <p className="mt-1 text-sm text-zinc-400">
+                These files and images live at the course level and support every workspace in the course.
+              </p>
+            </div>
+            <Link href={`/courses/${workspace.courseId}`}>
+              <Button variant="outline">Manage course context</Button>
+            </Link>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {workspace.courseContextDocuments.map((document) => (
               <div key={document.id} className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-4">
                 <p className="font-semibold text-zinc-100">{document.title}</p>
                 <p className="mt-1 text-sm text-zinc-500">
